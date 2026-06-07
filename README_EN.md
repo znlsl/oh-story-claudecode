@@ -154,6 +154,43 @@ Long-form deconstruction also produces `文风.md`; daily writing reads it to ke
 
 </details>
 
+<details>
+<summary>Deconstruction demo — Once I Hid My Love (曾将爱意私藏, short-form)</summary>
+
+`/story-short-analyze` deconstructing the short story 《曾将爱意私藏》 (~8,500 chars, win-back / "faked-death" genre):
+
+```
+demo/拆文库-曾将爱意私藏/
+├── 原文/原文.txt        # Source backup
+├── 拆文报告.md          # Story core + 5-dim scores + 6-facet payoff + cognitive reversal + 9-layer resonance
+├── 情节节点.md          # 54 plot points (source quotes + emotion markers −9~+9)
+├── 写作手法.md          # POV / dialogue / info-gap / object-hook — 11 techniques
+└── _meta.json           # structure_counts (Phase 7 gate basis)
+```
+
+Short-form deconstruction outputs `拆文报告 / 情节节点 / 写作手法`; downstream `/story-short-write` writes a new same-genre story from them.
+
+</details>
+
+<details>
+<summary>Import demo — 让你管账号，你高燃混剪炸全网 (long-form continuation project)</summary>
+
+`/story-import` reverse-builds the author's already-published first 20 chapters (~37k chars) into a continuation-ready writing project, handed off to `/story-long-write` for daily writing from chapter 21:
+
+```
+demo/让你管账号，你高燃混剪炸全网/
+├── 正文/        Chapters 001–020 (published source text)
+├── 大纲/        大纲.md · 卷纲_第1卷.md · 细纲_第001–020章.md (one file per chapter)
+├── 设定/        角色/ (6 character files) · 世界观/{background · cheat-system}
+│                关系.md · 题材定位.md · 文风.md
+├── 追踪/        伏笔.md (foreshadowing) · 时间线.md (timeline) · 角色状态.md (state) · 上下文.md
+└── 参考资料/    作品信息.md
+```
+
+Per-chapter extraction (events / characters / settings / foreshadowing / timeline) is reverse-engineered into a continuation bible, so the author seamlessly continues from chapter 21.
+
+</details>
+
 ## Agent System
 
 Writing skills internally coordinate 7 specialized agents:
@@ -277,6 +314,8 @@ Each skill includes a `references/` knowledge base loaded on demand to keep cont
 **Long-form** Qidian (起点中文网) · Fanqie Novels (番茄小说) · Jinjiang (晋江文学城) · Qimao (七猫小说) · Ciweimao (刺猬猫)
 
 **Short-form** Zhihu Yanayan (知乎盐言故事) · Fanqie Short-form (番茄短篇) · Qimao Short-form (七猫短篇)
+
+Real output samples are in [demo/](demo/): short-form deconstruction 《曾将爱意私藏》 · long-form deconstruction 《盘龙》 · long-form continuation project 《让你管账号，你高燃混剪炸全网》 · cover sample 《剑道独尊》.
 
 I built this skill pack to help me through a job-hunting transition :joy:, and I hope it can help others too.
 
