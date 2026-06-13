@@ -92,7 +92,14 @@ metadata:
 | 男频新书榜 | fanqienovel.com/rank/1_1_{cat_id} | 新风向信号 |
 | 女频新书榜 | fanqienovel.com/rank/0_1_{cat_id} | 新风向信号 |
 
-URL 参数：`/rank/{channel}_{type}_{cat_id}`，channel 0=女频/1=男频，type 1=新书榜/2=阅读榜。番茄有字体反爬，需用 `scripts/fanqie-rank-scraper.js`（通过详情页获取可读标题，绕过字体反爬，配合 browser-cdp 使用）。
+URL 参数：`/rank/{channel}_{type}_{cat_id}`，channel 0=女频/1=男频，type 1=新书榜/2=阅读榜。番茄列表页有字体反爬，须用 `scripts/fanqie-rank-scraper.js` 从详情页多策略解码书名/作者/题材/评分/标签/简介，配合 browser-cdp 使用：
+
+```bash
+node scripts/fanqie-rank-scraper.js --channel 1 --type 2 --outdir {输出目录}   # 男频阅读榜
+node scripts/fanqie-rank-scraper.js --channel all --top 15 --outdir {输出目录}   # 男女频，每题材前 15 本
+```
+
+> **番茄采集后必查文件头 `数据质量`**：标 `[标题解析异常]` 或书名大量显示 `（标题待解析）`，说明详情页解码失败（多为页面结构变动或被登录/验证页拦截）。先在已登录 Chrome 里手动打开任一 `https://fanqienovel.com/page/{bookId}` 确认页面正常，再重采；控制台报 `CDP 无响应` 则先按 browser-cdp 重启 Chrome。排查细节见 [references/scan-output-format.md](references/scan-output-format.md)。
 
 **七猫采集目标**：
 
@@ -185,6 +192,8 @@ URL 参数：`/rank/{channel}_{type}_{cat_id}`，channel 0=女频/1=男频，typ
 | 新书榜 | 新题材、新风向的早期信号 |
 | 题材分布 | 各品类在读数集中度 |
 | 在读数趋势 | 同题材不同作品的流量差距 |
+| 评分口碑 | 高在读 × 高评分=真爆款；高在读 × 低评分=买量/标题党风险 |
+| 标签热词 | 详情页标签的高频组合，揭示题材细分卖点（如「重生+赘婿+战神」） |
 
 #### 七猫小说分析维度
 
@@ -319,7 +328,7 @@ URL 参数：`/rank/{channel}_{type}_{cat_id}`，channel 0=女频/1=男频，typ
 | [references/publishing-guide.md](references/publishing-guide.md) | 平台适配+推荐机制校验+数据指标+简介设计 |
 | [references/scan-output-format.md](references/scan-output-format.md) | 脚本/CDP 采集字段定义+输出模板+文件命名规范 |
 | [scripts/cdp-utils.js](scripts/cdp-utils.js) | CDP 公共工具函数（ab/sleep/evalJSON/safeStr/scrollLoad/getArg），各采集脚本共用 |
-| [scripts/fanqie-rank-scraper.js](scripts/fanqie-rank-scraper.js) | 番茄榜单采集，通过详情页绕过字体反爬，配合 browser-cdp 使用 |
+| [scripts/fanqie-rank-scraper.js](scripts/fanqie-rank-scraper.js) | 番茄榜单采集，详情页多策略解码（书名/作者/题材/评分/标签/简介）绕过字体反爬，分批请求防超时，带连通性自检+标题解析率质量标注，配合 browser-cdp 使用 |
 | [scripts/qidian-rank-scraper.js](scripts/qidian-rank-scraper.js) | 起点榜单采集（畅销/月票/新书等），默认移动端 SSR 提取，PC/CDP 回退 |
 | [scripts/qimao-rank-scraper.js](scripts/qimao-rank-scraper.js) | 七猫榜单采集（大热/新书/完结等），tab 切换+滚动加载 |
 | [scripts/jjwxc-rank-scraper.js](scripts/jjwxc-rank-scraper.js) | 晋江榜单采集（收入金榜/月榜等），按频道分组提取 |
