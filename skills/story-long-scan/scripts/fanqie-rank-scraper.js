@@ -4,7 +4,7 @@
  *
  * 配合 browser-cdp skill 使用。先启动 Chrome CDP 环境，再运行本脚本。
  * 采集策略：从榜单页 __INITIAL_STATE__ 取结构化列表，再逐本请求详情页解码真实
- * 书名/作者/简介/题材/评分/标签（番茄列表页有字体反爬，详情页 HTML 里是明文）。
+ * 书名/作者/简介/题材/标签（番茄列表页有字体反爬，详情页 HTML 里是明文）。
  * 输出 Markdown 格式匹配 scan-output-format.md 规范。
  *
  * 用法：
@@ -125,7 +125,9 @@ function extractBookList(port) {
 /**
  * 批量解码详情：逐本同步 XHR 请求 /page/{id}，多策略解析明文字段。
  * 番茄列表页书名/作者被字体反爬，详情页 HTML 内嵌 JSON 与 <title> 是明文。
- * 返回 { id: {title, author, desc, category, score, tags} }。
+ * 字段名以真实 SSR(__INITIAL_STATE__) 为准：bookName/author/abstract 明文，
+ * 题材在 categoryV2(转义 JSON 数组的首个 Name)，番茄 SSR 不含数字评分。
+ * 返回 { id: {title, author, desc, category, tags} }。
  */
 function buildDetailJS(ids) {
   return `JSON.stringify((function(){
@@ -150,23 +152,26 @@ function buildDetailJS(ids) {
           /"authorName"\\s*:\\s*"([^"]+)"/,
           /<meta[^>]+property="og:novel:author"[^>]+content="([^"]+)"/
         ]);
-        var desc=pick(h,[
-          /<meta\\s+name="description"\\s+content="([^"]+)"/,
-          /"abstract"\\s*:\\s*"([^"]{10,}?)"/,
+        // abstract(真实简介)优先；meta description 是平台模板("番茄小说提供...")，
+        // 且常带 data-rh 属性，故用宽松属性匹配兜底。
+        var abs=pick(h,[/"abstract"\\s*:\\s*"([^"]{6,}?)"/]);
+        var desc=abs||pick(h,[
+          /<meta[^>]+name="description"[^>]+content="([^"]+)"/,
           /<meta[^>]+property="og:description"[^>]+content="([^"]+)"/
         ]);
+        // 题材：category 常为空字符串，真实题材在 categoryV2(转义 JSON)首个 Name。
         var category=pick(h,[
-          /"category"\\s*:\\s*"([^"]+)"/,
-          /"categoryName"\\s*:\\s*"([^"]+)"/,
+          /"categoryV2":"\\[\\{[\\s\\S]*?\\\\"Name\\\\":\\\\"([^"\\\\]+)/,
+          /"category"\\s*:\\s*"([^"]{1,20})"/,
           /<meta[^>]+property="og:novel:category"[^>]+content="([^"]+)"/
         ]);
-        var score=pick(h,[/"score"\\s*:\\s*"?([0-9]+(?:\\.[0-9]+)?)"?/]);
+        // 标签：番茄简介开头常带【tag+tag+...】，是题材细分的真实信号。
         var tags='';
-        var tm=h.match(/"tags"\\s*:\\s*\\[([^\\]]*)\\]/);
-        if(tm){var arr=tm[1].match(/"([^"]+)"/g)||[];tags=arr.map(function(s){return s.replace(/"/g,'');}).slice(0,6).join('、');}
-        map[id]={title:title,author:author,desc:desc,category:category,score:score,tags:tags};
+        var bm=(abs||desc||'').match(/[【\\[]([^】\\]]{2,40})[】\\]]/);
+        if(bm){tags=bm[1].split(/[+、,\\/\\s]+/).filter(Boolean).slice(0,6).join('、');}
+        map[id]={title:title,author:author,desc:desc,category:category,tags:tags};
       }catch(e){
-        map[id]={title:'',author:'',desc:'',category:'',score:'',tags:'',err:String(e&&e.message||e)};
+        map[id]={title:'',author:'',desc:'',category:'',tags:'',err:String(e&&e.message||e)};
       }
     }
     return map;
@@ -220,6 +225,10 @@ function fmtStatus(s) {
 function cleanDesc(raw) {
   if (!raw) return "";
   let d = String(raw)
+    // 简介取自 JSON 字符串原文，先还原常见转义（\n \uXXXX \" 等）
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\[nrt]/g, " ")
+    .replace(/\\"/g, '"')
     .replace(/番茄小说[^。！？]*?(?:免费阅读|完整版|在线阅读)[^。！？]*[。！？]/g, "")
     .replace(/番茄小说[^。！？]*?(?:免费阅读|完整版|在线阅读)[^。！？]*$/g, "")
     .replace(/\s+/g, " ")
@@ -341,12 +350,11 @@ function scrapeChannel(ch, type) {
         const title = info.title || "（标题待解析）";
         const author = info.author || "未知";
         const category = info.category || b.category || "";
-        const score = info.score ? ` · ${info.score}分` : "";
         const catSeg = category ? ` · ${category}` : "";
 
         bodyLines.push(`### #${i + 1} ${title}`);
         bodyLines.push(
-          `*${author}${catSeg} · ${fmtStatus(b.creationStatus)} · ${fmtReads(b.read_count)} 在读 · ${fmtWords(b.wordNumber)}字${score}*`
+          `*${author}${catSeg} · ${fmtStatus(b.creationStatus)} · ${fmtReads(b.read_count)} 在读 · ${fmtWords(b.wordNumber)}字*`
         );
         if (info.tags) bodyLines.push(`**标签：** ${info.tags}`);
         bodyLines.push(`**最新更新：** ${b.lastChapterTitle || "未知"}`);
