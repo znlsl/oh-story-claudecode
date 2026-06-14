@@ -199,7 +199,7 @@ function main() {
       sleep(800);
       const resp = fetchBookList(PORT, token, p);
 
-      // 区分三种失败：接口无响应(超时/CDP) / 401 未授权 / 其他错误码
+      // 区分失败：接口无响应(超时/CDP) / 401 未授权
       if (!resp) {
         console.error(`  ✗ 第${p}页接口无响应（请求超时或 CDP 中断），已停止。`);
         break;
@@ -208,14 +208,16 @@ function main() {
         console.log(`  ⚠ 第${p}页认证失败（401），请重新登录后重试。`);
         break;
       }
-      if (resp.code != null && resp.code !== 0 && resp.code !== 200) {
-        console.error(`  ✗ 第${p}页接口返回错误 code=${resp.code} ${resp.msg || ""}，已停止。`);
-        break;
-      }
 
       const rows = resp?.data?.rows;
       if (!rows || !rows.length) {
-        console.log(`  第${p}页无数据，停止`);
+        // 仅在无数据时才用 code 区分"服务端错误"与"正常到底"，避免把
+        // 携带非常规成功 code 的有效响应误判为错误（成功带 rows 一律放行）
+        if (resp.code != null && resp.code !== 0 && resp.code !== 200) {
+          console.error(`  ✗ 第${p}页接口返回错误 code=${resp.code} ${resp.msg || ""}，已停止。`);
+        } else {
+          console.log(`  第${p}页无数据，停止`);
+        }
         break;
       }
 

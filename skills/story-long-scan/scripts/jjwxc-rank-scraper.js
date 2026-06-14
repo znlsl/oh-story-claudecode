@@ -24,7 +24,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { ab, sleep, scrollLoad, getArg } = require("./cdp-utils");
+const { ab, sleep, getArg } = require("./cdp-utils");
 
 const BASE_URL = "https://www.jjwxc.net/topten.php";
 
