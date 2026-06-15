@@ -91,6 +91,8 @@ npx skills add worldwonderer/oh-story-claudecode -y -g
 
 > After updating, if a project has already run `/story-setup`, re-run `/story-setup` from the project root to sync hooks / agents / references. Per-version changes are in [CHANGELOG.md](CHANGELOG.md) and [Releases](https://github.com/worldwonderer/oh-story-claudecode/releases).
 
+> **Multi-agent collaboration needs setup + a fresh session**: the 7 specialist agents (story-architect, narrative-writer, consistency-checker, etc.) are written into your project's `.claude/agents/` by `/story-setup`. Claude Code only registers custom agents **at session start**, so **after `/story-setup` finishes you must open a new Claude Code session** before story-review's multi-perspective review and the agent collaboration in the writing flow take effect; otherwise skills get "subagent_type unavailable" and fall back to solo (single perspective). To check: run `/story-review` in the new session — a header of `Effective Mode: full/lean` means agents registered, `Fallback: ... -> solo` means you're still in the old session.
+
 ## Skills
 
 | Skill | Trigger | Description |
@@ -209,7 +211,7 @@ Agents load writing theory from `references/` on demand (character design, dialo
 
 ## Automation Hooks
 
-6 hooks deployed automatically by `/story-setup`:
+7 hooks deployed automatically by `/story-setup`:
 
 | Hook | Trigger | Function |
 |:-----|:---------|:---------|
@@ -219,6 +221,7 @@ Agents load writing theory from `references/` on demand (character design, dialo
 | pre-compact.sh | Before context compaction | Save progress snapshot path and line-count summary |
 | post-compact.sh | After context compaction | Prompt to read progress snapshot for context recovery |
 | validate-story-commit.sh | git commit | Check hardcoded attributes, setting required fields (warning only, non-blocking) |
+| guard-outline-before-prose.sh | Before writing prose (Write/Edit) | Blocks first creation of a chapter/story body when its 细纲/小节大纲 is missing (blocking) — enforces outline-first |
 
 ## Project File Structure
 
