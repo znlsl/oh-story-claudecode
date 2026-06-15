@@ -104,8 +104,8 @@ case "$BASE" in
     OUTLINE_DIR="$BOOK_DIR/大纲"
     FOUND=""
     if [ -d "$OUTLINE_DIR" ]; then
-      # 容忍补零差异：按整数章号匹配 大纲/细纲_第*章.md
-      for f in "$OUTLINE_DIR"/细纲_第*章.md; do
+      # 容忍补零差异与标题后缀：按整数章号匹配 大纲/细纲_第*章*.md
+      for f in "$OUTLINE_DIR"/细纲_第*章*.md; do
         [ -e "$f" ] || continue
         fnum="$(basename "$f" | sed -n 's/^细纲_第0*\([0-9][0-9]*\)章.*/\1/p')"
         if [ "$fnum" = "$NUM" ]; then FOUND="$f"; break; fi

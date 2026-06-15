@@ -361,6 +361,8 @@ run_guard() {
 : > "$guard_root/book/大纲/细纲_第1章.md"
 [ "$(run_guard 'book/正文/第1章_开端.md')" = "0" ] || fail "guard wrongly blocked long prose when 细纲 present"
 [ "$(run_guard 'book/正文/第001章_开端.md')" = "0" ] || fail "guard did not tolerate chapter-number zero padding (第001章 vs 细纲_第1章)"
+: > "$guard_root/book/大纲/细纲_第7章_惊变.md"
+[ "$(run_guard 'book/正文/第7章_x.md')" = "0" ] || fail "guard did not tolerate title-suffixed 细纲 (细纲_第7章_惊变.md)"
 # 短篇授权流：有 设定.md 信号 + 缺小节大纲 -> 拦截；补小节大纲 -> 放行
 : > "$guard_root/short/设定.md"
 [ "$(run_guard 'short/正文.md')" = "2" ] || fail "guard did not BLOCK short prose when 小节大纲.md missing"
