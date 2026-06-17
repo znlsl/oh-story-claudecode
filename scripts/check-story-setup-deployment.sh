@@ -61,8 +61,8 @@ write_sentinel() {
   local root="$1"
   cat > "$root/.story-deployed" <<'SENTINEL'
 deployed_at: 2026-05-24T00:00:00Z
-agents_version: 11
-setup_skill_version: 1.2.0
+agents_version: 12
+setup_skill_version: 1.2.1
 target_cli: claude-code
 resolver_strategy: project-local-skill-reference
 references_dir: .claude/skills/story-setup/references/agent-references
@@ -235,8 +235,8 @@ setup_git_repo "$bad_sentinel_root"
 copy_hooks "$bad_sentinel_root"
 cat > "$bad_sentinel_root/.story-deployed" <<'SENTINEL'
 deployed_at: 2026-05-24T00:00:00Z
-agents_version: 11
-setup_skill_version: 1.2.0
+agents_version: 12
+setup_skill_version: 1.2.1
 resolver_strategy: project-local-skill-reference
 references_dir: .claude/skills/story-setup/references/agent-references
 SENTINEL
@@ -331,7 +331,7 @@ python3 -m json.tool "$SETTINGS_FILE" >/dev/null
 echo "  OK TS9 settings JSON"
 
 # TS10 — Upgrade notes completeness
-assert_grep 'agents_version: 11|`agents_version: 11`|agents_version`.*11' "$UPGRADING_FILE" "UPGRADING.md must document agents_version 11"
+assert_grep 'agents_version: 12|`agents_version: 12`|agents_version`.*12' "$UPGRADING_FILE" "UPGRADING.md must document agents_version 12"
 assert_grep '/story-setup' "$UPGRADING_FILE" "UPGRADING.md must tell users to rerun /story-setup"
 assert_grep 'hook.*lib|lib/common\.sh|lib/sentinel\.sh' "$UPGRADING_FILE" "UPGRADING.md must document hook lib repair"
 assert_grep 'reference bundle|Agent Reference|agent-references' "$UPGRADING_FILE" "UPGRADING.md must document reference bundle repair"
