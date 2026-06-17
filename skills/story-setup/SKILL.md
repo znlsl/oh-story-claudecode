@@ -1,6 +1,6 @@
 ---
 name: story-setup
-version: 1.2.0
+version: 1.2.1
 description: |
   网文写作工具集基础设施部署。将 hooks/rules/agents/CLAUDE.md 等基础设施部署到用户项目目录。
   触发方式：/story-setup、「准备写书」「帮我搭一下环境」「配置写作项目」
