@@ -161,42 +161,43 @@ maxTurns: 15
    - 存在 → 从关键信息推进表、情绪触动点、爆发节奏/冷却段中选择 1 条 `rhythm_reference`，并写入 `rhythm_source_path`
    - 不存在 → `gaps.rhythm_missing: true`；不要失败，后续从 `拆文报告.md` 节奏摘要、匹配章摘要、`剧情/故事线.md` 回退抽取节奏线索
    - 若 `情绪模块.md` 与 `节奏.md` 对同一章节/模块的读者情绪或爆发点描述互相矛盾，保留两条原文摘要，并返回 `gaps.module_rhythm_conflict: true` 与 `gaps.conflict: "..."`；调用方按两个权威文件优先于 `拆文报告.md` / `故事线.md` 的规则处理，禁止自行改写
-6. **读文风**：
+7. **读文风**：
    - `Read {对标书路径}/文风.md`
    - 不存在 → 返回 `gaps.profile_missing: true, expected_path: "..."`，**不继续后续步骤**
    - 检查「生成记录」里的 `文风可用：否` → 返回 `gaps.profile_degenerate: true`，后续不把文风作为强约束
-7. **可用性检查（只读可执行）**：
+8. **可用性检查（只读可执行）**：
    - 本 agent 只有 `Read/Glob/Grep`，不能调用 Bash/stat。
    - 只读取文风文件「生成记录」：若写有 `文风可用：否`、`需重生`、`原文缺失` 等标记 → `gaps.profile_stale: true` 或 `gaps.profile_degenerate: true`，并在 `stale_reason` 写明原因。
    - 不做文件时间比较；默认 `profile_stale: false`。
    - 兼容旧文件：若旧文风出现旧版内部降级标记（字面量 `degenerate: true`），也返回 `gaps.profile_degenerate: true`。
-8. **章节基调候选集**：
+9. **章节基调候选集**：
    - `Glob {对标书路径}/章节/*_摘要.md`
    - 对每个文件 `Grep -hE '基调：(紧张|轻松|悲伤|热血|爽|甜|温馨|恐怖|压抑|其他)'`（**全角冒号**，不锚定行首）拿到该章所有情节点基调
    - 章基调聚合：众数；并列时按 grep 输出顺序取最早
    - 候选集 = 章基调 == 本章情绪/基调的章节列表
-9. **相近基调兜底**（完全没有同基调章节时）：
+10. **相近基调兜底**（完全没有同基调章节时）：
    - 先从本章细纲/查询参数里判断更接近“紧张、热血、爽、甜、轻松、温馨、悲伤、恐怖、压抑”哪一类；不要写死对照表。
    - 选择一个最接近的基调重新筛候选集，并在结果里说明“使用相近基调兜底”。
    - 仍空 → `gaps.tone_match_failed: true`，跳过匹配章节读取，但仍返回整书文风、`selected_emotion_module` 和 `rhythm_reference`。
-10. **多候选章节选择规则**（候选集多章时）：
+11. **多候选章节选择规则**（候选集多章时）：
    - L1 爽点类型最强匹配（调用方提供爽点字段时，对每个候选章读 `_摘要.md` 的「关键事件」判断）
    - L2 摘要情节点数 / 可读到的原文章节估算长度最接近本章目标字数（如提供）；本 agent 不用 Bash 统计，拿不到原文长度时跳过 L2，不得把摘要文件字数当原文字数
    - L3 章节号最小
-11. **读匹配章节资料**：
+12. **读匹配章节资料**：
    - 先 `Read {对标书路径}/章节/第K章_摘要.md`，提取本章基调序列、关键事件、爽点/情绪节点
    - 优先提取摘要内「关键信息与扩写技法」表，作为 `matched_chapter_techniques` 的一部分；这只是证据/补足，不覆盖 `剧情/节奏.md`
    - 若 `{对标书路径}/章节/第K章_深度拆解.md` 存在，再读取并提取「可借鉴要素」+ 反应层 + 章尾钩子类型
    - 若同章深度拆解不存在（常见：只有黄金三章有深度拆解），不要失败；回退读取 `第1章_深度拆解.md`、`第2章_深度拆解.md`、`第3章_深度拆解.md` 中基调最接近的一章，或仅使用文风「可借鉴技巧」
    - 在 `gaps.matched_deep_dive_missing: true` 标记该回退
-12. **模块/节奏缺失回退补足**：
-    - 如果 `gaps.module_missing: true`，从 `拆文报告.md` 的「读者需求 / 情绪引擎」「可复现模块」、文风可借鉴技巧或匹配章摘要中生成低置信度 `selected_emotion_module`，并把 `module_source_path` 指向实际来源；仍无则为 null
-    - 如果 `gaps.rhythm_missing: true`，从 `拆文报告.md` 的「节奏与情绪触动点」、匹配章摘要或 `剧情/故事线.md` 中生成低置信度 `rhythm_reference`，并把 `rhythm_source_path` 指向实际来源；仍无则为 null
-13. **抽取原文锚点片段**（从文风文件里）：
+13. **模块/节奏缺失回退补足**：
+    - 如果 `gaps.missing_primary_contract: true`，不要回退补足；直接保留 null 与 `repair_action`，调用方必须停止修复。
+    - 如果 legacy 的 `gaps.module_missing: true`，从 `拆文报告.md` 的「读者需求 / 情绪引擎」「可复现模块」、文风可借鉴技巧或匹配章摘要中生成低置信度 `selected_emotion_module`，并把 `module_source_path` 指向实际来源；仍无则为 null
+    - 如果 legacy 的 `gaps.rhythm_missing: true`，从 `拆文报告.md` 的「节奏与情绪触动点」、匹配章摘要或 `剧情/故事线.md` 中生成低置信度 `rhythm_reference`，并把 `rhythm_source_path` 指向实际来源；仍无则为 null
+14. **抽取原文锚点片段**（从文风文件里）：
     - 从文风文件 `## 原文锚点片段` 段读出所有按基调标注的片段
     - 按本章情绪/基调选 1-2 段（精确匹配优先，无则取相近基调）
     - 完整传递 300-500 字原文（不要截断/概括）
-14. **返回结构化 JSON**
+15. **返回结构化 JSON**
 
 ### context_load 流程（综合查询）
 
@@ -309,6 +310,9 @@ maxTurns: 15
     "rhythm_missing": false,
     "module_rhythm_conflict": false,
     "conflict": null,
+    "legacy_deconstruction": false,
+    "missing_primary_contract": false,
+    "repair_action": null,
     "profile_missing": false,
     "profile_stale": false,
     "profile_degenerate": false,

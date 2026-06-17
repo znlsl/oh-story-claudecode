@@ -1,4 +1,4 @@
-<!-- Last synced with README.md: 2026-05-23 -->
+<!-- Last synced with README.md: 2026-06-17 -->
 
 **English** | [中文](README.md)
 
