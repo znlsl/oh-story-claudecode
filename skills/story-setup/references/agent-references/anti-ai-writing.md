@@ -186,7 +186,7 @@ sync-source: skills/story-setup/references/agent-references/anti-ai-writing.md
 ## 快速自检口诀
 
 ```
-一句话一段。一段不过 4 分句。
+一事一段，镜头自然断。
 对话要像人说话。
 心情不写心里话。
 结尾不搞大升华。
@@ -194,7 +194,7 @@ sync-source: skills/story-setup/references/agent-references/anti-ai-writing.md
 日常要埋伏笔桩。
 ```
 
-> 网文段落规则：一句话一段，一段不超过 4 个分句；但也不要连续多段同长度，长短要交错。
+> 网文段落规则：按戏剧单元/镜头/一件事结束自然断段；短段快读，长段承载完整推理、氛围和情绪链，避免机械单句成段或通篇同长度。
 
 ---
 
