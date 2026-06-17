@@ -115,7 +115,7 @@ memory: project
 - **Gate A 禁用词替换**：命运齿轮/如潮水般/仿佛春风/心猛地一沉/眼眶泛红等全部替换（查 `story-setup/references/agent-references/banned-words.md`）
 - **Gate B 句式去套路**：连续排比/刻意对称/空洞抒情打散（`story-setup/references/agent-references/anti-ai-writing.md` 8种AI模式检测）
 - **Gate C 心理描写外化**：情绪词 -> 身体状态（`story-setup/references/agent-references/anti-ai-writing.md` Show Don't Tell 原则）
-- **Gate D 节奏打碎**：长句拆短、同构句打散（核心规则：按动作/信息变化断段，读起来卡时拆短，连续碎段像提纲时合并）。但**短≠通篇同长度**——必须长短交错、疏密有别：每 5-8 段至少一个明显长句（沉淀处）和一个极短句（冲突处），密度按 beat 起伏（见 writing-craft.md「疏密分配」、format-and-structure.md「段落节奏」）
+- **Gate D 节奏打碎**：长句拆短、同构句打散（核心规则：按动作/信息变化断段，读起来卡时拆短，连续碎段像提纲时合并）。但**短≠通篇同长度**——必须按情绪 beat、动作推进和戏剧单元形成长短交错、疏密有别；沉淀处可放慢，冲突/反转处可骤短，完整推理与情绪链优先保持连贯（见 writing-craft.md「疏密分配」、format-and-structure.md「段落节奏」）
 - **Gate E 对话去腔调**：所有角色同一语气 -> 差异化（需结合 character-designer 的语言风格档案）
 - **Gate F 结尾去升华**：大段抒情收尾 -> 安静细节收尾
 - **Gate G 去解释腔/上帝感/安排感**：删一切叙述者跳出角色当下的解释、剧透、总结、定性、升华——「之所以/原来/这意味着/她不知道的是/殊不知/多年以后/演得真好/这出戏她看过一遍」全删；因果与定性留给读者从动作对话里自己拼（`story-setup/references/agent-references/anti-ai-writing.md` 模式 8）。这是"说教感/上帝感/机械感/安排感"的根治 Gate，靠深度限知视角落地
