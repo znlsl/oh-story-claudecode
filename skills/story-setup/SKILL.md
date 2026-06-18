@@ -175,7 +175,7 @@ hooks 注册合并按 command 字段去重：
 
 - `.story-deployed` 不存在 → 全新安装，Phase 2 全部执行
 - `.story-deployed` 存在且 `agents_version: 12` → 提示已部署，AskUserQuestion 确认是否重新部署
-- `.story-deployed` 存在但 `agents_version` < 11 → 提示需要更新，重新执行 Phase 2 覆盖 agents/hooks/rules/reference bundle，CLAUDE.md 和 settings.local.json 走合并策略
+- `.story-deployed` 存在但 `agents_version` < 12 → 提示需要更新，重新执行 Phase 2 覆盖 agents/hooks/rules/reference bundle，CLAUDE.md 和 settings.local.json 走合并策略
 
 ---
 
