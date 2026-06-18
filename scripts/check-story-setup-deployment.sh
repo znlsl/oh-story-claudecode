@@ -243,6 +243,21 @@ SENTINEL
 bad_sentinel_out="$(run_from_nested "$bad_sentinel_root" session-start.sh 2>&1 || true)"
 echo "$bad_sentinel_out" | grep -q '缺少 target_cli' || fail "session-start did not warn for missing sentinel target_cli"
 echo "$bad_sentinel_out" | grep -q '参考资料包缺失或为空' || fail "session-start did not warn for missing deployed reference bundle"
+
+stale_v11_root="$TMP_DIR/stale-v11"
+mkdir -p "$stale_v11_root/.claude/skills/story-setup/references/agent-references"
+setup_git_repo "$stale_v11_root"
+copy_hooks "$stale_v11_root"
+cat > "$stale_v11_root/.story-deployed" <<'SENTINEL'
+deployed_at: 2026-05-24T00:00:00Z
+agents_version: 11
+setup_skill_version: 1.2.0
+target_cli: claude-code
+resolver_strategy: project-local-skill-reference
+references_dir: .claude/skills/story-setup/references/agent-references
+SENTINEL
+stale_v11_out="$(run_from_nested "$stale_v11_root" session-start.sh 2>&1 || true)"
+echo "$stale_v11_out" | grep -q '低于 v12' || fail "session-start did not warn for agents_version 11 stale v12 deployment"
 echo "  OK TS5 sentinel diagnostics"
 
 # TS6 — Short project non-mutation
@@ -332,10 +347,23 @@ echo "  OK TS9 settings JSON"
 
 # TS10 — Upgrade notes completeness
 assert_grep 'agents_version: 12|`agents_version: 12`|agents_version`.*12' "$UPGRADING_FILE" "UPGRADING.md must document agents_version 12"
+assert_grep 'AGENTS_VERSION.*-lt 12|AGENTS_VERSION" -lt 12' "$HOOKS_DIR/session-start.sh" "session-start must warn for agents_version 11 under v12 deployment"
+assert_grep 'agents_version.*< 12|版本 < 12' "$SKILL_DIR/SKILL.md" "story-setup redeploy branch must treat agents_version 11 as stale"
+assert_grep 'agents_version.*小于 `12`|小于 .12' "$REPO_ROOT/skills/story-review/SKILL.md" "story-review must treat agents_version 11 as stale"
 assert_grep '/story-setup' "$UPGRADING_FILE" "UPGRADING.md must tell users to rerun /story-setup"
 assert_grep 'hook.*lib|lib/common\.sh|lib/sentinel\.sh' "$UPGRADING_FILE" "UPGRADING.md must document hook lib repair"
 assert_grep 'reference bundle|Agent Reference|agent-references' "$UPGRADING_FILE" "UPGRADING.md must document reference bundle repair"
 assert_grep '新版写作 Agent|写作 Agent|对标文风' "$UPGRADING_FILE" "UPGRADING.md must briefly document the v10 writing-agent refresh"
+assert_grep '关键信息与扩写技法' "$UPGRADING_FILE" "UPGRADING.md must document v12 key-information expansion"
+assert_grep '剧情/节奏\.md|`剧情/节奏\.md`|节奏\.md' "$UPGRADING_FILE" "UPGRADING.md must document v12 rhythm artifact"
+assert_grep '剧情/情绪模块\.md|`剧情/情绪模块\.md`|情绪模块\.md' "$UPGRADING_FILE" "UPGRADING.md must document v12 emotion module artifact"
+assert_grep 'selected_emotion_module' "$UPGRADING_FILE" "UPGRADING.md must document story-explorer selected_emotion_module"
+assert_grep 'rhythm_reference' "$UPGRADING_FILE" "UPGRADING.md must document story-explorer rhythm_reference"
+assert_grep 'contract_version.*v12|gaps\.contract_version == "v12"' "$SKILL_DIR/references/templates/agents/story-explorer.md" "story-explorer must classify v12 benchmark contracts before fallback"
+assert_grep 'contract_version.*legacy|legacy_deconstruction: true|legacy_deconstruction": true' "$SKILL_DIR/references/templates/agents/story-explorer.md" "story-explorer must classify legacy benchmark fallback explicitly"
+assert_grep 'missing_primary_contract: true|missing_primary_contract": true' "$SKILL_DIR/references/templates/agents/story-explorer.md" "story-explorer must emit missing_primary_contract for broken v12 canonical artifacts"
+assert_grep 'repair_action.*Stage 3|Stage 3.*repair_action|重跑 /story-long-analyze Stage 3' "$SKILL_DIR/references/templates/agents/story-explorer.md" "story-explorer must provide a v12 repair action instead of silent fallback"
+assert_grep 'legacy_deconstruction: true|missing_primary_contract' "$REPO_ROOT/skills/story-long-write/SKILL.md" "story-long-write must not silently fallback for v12 primary contract gaps"
 echo "  OK TS10 upgrade notes"
 
 # TS11 — Outline-before-prose write guard (BLOCKING PreToolUse hook)
