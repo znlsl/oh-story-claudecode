@@ -61,8 +61,8 @@ write_sentinel() {
   local root="$1"
   cat > "$root/.story-deployed" <<'SENTINEL'
 deployed_at: 2026-05-24T00:00:00Z
-agents_version: 12
-setup_skill_version: 1.2.1
+agents_version: 13
+setup_skill_version: 1.2.2
 target_cli: claude-code
 resolver_strategy: project-local-skill-reference
 references_dir: .claude/skills/story-setup/references/agent-references
@@ -235,8 +235,8 @@ setup_git_repo "$bad_sentinel_root"
 copy_hooks "$bad_sentinel_root"
 cat > "$bad_sentinel_root/.story-deployed" <<'SENTINEL'
 deployed_at: 2026-05-24T00:00:00Z
-agents_version: 12
-setup_skill_version: 1.2.1
+agents_version: 13
+setup_skill_version: 1.2.2
 resolver_strategy: project-local-skill-reference
 references_dir: .claude/skills/story-setup/references/agent-references
 SENTINEL
@@ -244,20 +244,20 @@ bad_sentinel_out="$(run_from_nested "$bad_sentinel_root" session-start.sh 2>&1 |
 echo "$bad_sentinel_out" | grep -q '缺少 target_cli' || fail "session-start did not warn for missing sentinel target_cli"
 echo "$bad_sentinel_out" | grep -q '参考资料包缺失或为空' || fail "session-start did not warn for missing deployed reference bundle"
 
-stale_v11_root="$TMP_DIR/stale-v11"
-mkdir -p "$stale_v11_root/.claude/skills/story-setup/references/agent-references"
-setup_git_repo "$stale_v11_root"
-copy_hooks "$stale_v11_root"
-cat > "$stale_v11_root/.story-deployed" <<'SENTINEL'
+stale_v12_root="$TMP_DIR/stale-v12"
+mkdir -p "$stale_v12_root/.claude/skills/story-setup/references/agent-references"
+setup_git_repo "$stale_v12_root"
+copy_hooks "$stale_v12_root"
+cat > "$stale_v12_root/.story-deployed" <<'SENTINEL'
 deployed_at: 2026-05-24T00:00:00Z
-agents_version: 11
-setup_skill_version: 1.2.0
+agents_version: 12
+setup_skill_version: 1.2.1
 target_cli: claude-code
 resolver_strategy: project-local-skill-reference
 references_dir: .claude/skills/story-setup/references/agent-references
 SENTINEL
-stale_v11_out="$(run_from_nested "$stale_v11_root" session-start.sh 2>&1 || true)"
-echo "$stale_v11_out" | grep -q '低于 v12' || fail "session-start did not warn for agents_version 11 stale v12 deployment"
+stale_v12_out="$(run_from_nested "$stale_v12_root" session-start.sh 2>&1 || true)"
+echo "$stale_v12_out" | grep -q '低于 v13' || fail "session-start did not warn for agents_version 12 stale v13 deployment"
 echo "  OK TS5 sentinel diagnostics"
 
 # TS6 — Short project non-mutation
@@ -346,10 +346,10 @@ python3 -m json.tool "$SETTINGS_FILE" >/dev/null
 echo "  OK TS9 settings JSON"
 
 # TS10 — Upgrade notes completeness
-assert_grep 'agents_version: 12|`agents_version: 12`|agents_version`.*12' "$UPGRADING_FILE" "UPGRADING.md must document agents_version 12"
-assert_grep 'AGENTS_VERSION.*-lt 12|AGENTS_VERSION" -lt 12' "$HOOKS_DIR/session-start.sh" "session-start must warn for agents_version 11 under v12 deployment"
-assert_grep 'agents_version.*< 12|版本 < 12' "$SKILL_DIR/SKILL.md" "story-setup redeploy branch must treat agents_version 11 as stale"
-assert_grep 'agents_version.*小于 `12`|小于 .12' "$REPO_ROOT/skills/story-review/SKILL.md" "story-review must treat agents_version 11 as stale"
+assert_grep 'agents_version: 13|`agents_version: 13`|agents_version`.*13' "$UPGRADING_FILE" "UPGRADING.md must document agents_version 13"
+assert_grep 'AGENTS_VERSION.*-lt 13|AGENTS_VERSION" -lt 13' "$HOOKS_DIR/session-start.sh" "session-start must warn for agents_version 12 under v13 deployment"
+assert_grep 'agents_version.*< 13|版本 < 13' "$SKILL_DIR/SKILL.md" "story-setup redeploy branch must treat agents_version 12 as stale"
+assert_grep 'agents_version.*小于 `13`|小于 .13' "$REPO_ROOT/skills/story-review/SKILL.md" "story-review must treat agents_version 12 as stale"
 assert_grep '/story-setup' "$UPGRADING_FILE" "UPGRADING.md must tell users to rerun /story-setup"
 assert_grep 'hook.*lib|lib/common\.sh|lib/sentinel\.sh' "$UPGRADING_FILE" "UPGRADING.md must document hook lib repair"
 assert_grep 'reference bundle|Agent Reference|agent-references' "$UPGRADING_FILE" "UPGRADING.md must document reference bundle repair"
@@ -364,6 +364,12 @@ assert_grep 'contract_version.*legacy|legacy_deconstruction: true|legacy_deconst
 assert_grep 'missing_primary_contract: true|missing_primary_contract": true' "$SKILL_DIR/references/templates/agents/story-explorer.md" "story-explorer must emit missing_primary_contract for broken v12 canonical artifacts"
 assert_grep 'repair_action.*Stage 3|Stage 3.*repair_action|重跑 /story-long-analyze Stage 3' "$SKILL_DIR/references/templates/agents/story-explorer.md" "story-explorer must provide a v12 repair action instead of silent fallback"
 assert_grep 'legacy_deconstruction: true|missing_primary_contract' "$REPO_ROOT/skills/story-long-write/SKILL.md" "story-long-write must not silently fallback for v12 primary contract gaps"
+assert_grep '章节蓝图|内容概括|情节安排|人物关系和出场顺序|结尾设定和钩子' "$UPGRADING_FILE" "UPGRADING.md must document v13 chapter blueprint"
+assert_grep '语气标点谱系|通篇句号化|随机.*标点|对话.*——' "$UPGRADING_FILE" "UPGRADING.md must document v13 tone punctuation"
+assert_grep '内容概括（五段式）|情节安排（多线）|人物关系和出场顺序|结尾设定和钩子' "$SKILL_DIR/references/templates/agents/story-architect.md" "story-architect must output v13 chapter blueprint fields"
+assert_grep '逻辑线|人物关系变化|代价兑现 / 收益兑现|结尾设定' "$SKILL_DIR/references/templates/agents/consistency-checker.md" "consistency-checker must consume v13 outline blueprint fields"
+assert_grep '语气标点谱系|通篇句号化|随机标点堆砌|对话.*——' "$SKILL_DIR/references/templates/agents/narrative-writer.md" "narrative-writer must enforce v13 tone punctuation"
+assert_grep '语气标点谱系|通篇句号化|随机.*标点|对话.*——' "$AGENT_REFS_DIR/format-and-structure.md" "agent references must include v13 tone punctuation format rules"
 echo "  OK TS10 upgrade notes"
 
 # TS11 — Outline-before-prose write guard (BLOCKING PreToolUse hook)

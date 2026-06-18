@@ -1,4 +1,4 @@
-<!-- Last synced with README.md: 2026-06-17 -->
+<!-- Last synced with README.md: 2026-06-18 -->
 
 **English** | [中文](README.md)
 
@@ -17,6 +17,8 @@ Professional authors follow a three-step method:
 3. **Commercialize** — learn and apply hooks, payoff density, expectation management.
 
 Built around four pillars: reverse-engineering hits · plot modularization · layered state management · human-AI collaboration.
+
+> Starting in v0.6.17, long-form outlines become richer chapter blueprints (five-stage summary, multi-line plot plan, relationship/order tracking, ending hooks), and prose/review guidance adds tone-aware punctuation to avoid all-period flattening.
 
 ## Pipeline Overview
 
@@ -244,7 +246,7 @@ The file system separates settings, outlines, prose, and tracking into independe
 ├── Outline/
 │   ├── Outline.md          # Full-book volume-level structure
 │   ├── Volume_1.md         # One per volume: payoff pacing + emotion arc + character arc + foreshadowing + twists
-│   ├── Chapter_001.md      # One per chapter: events + hooks + payoffs + suspense
+│   ├── Chapter_001.md      # One per chapter: summary + multi-line plot + relationships/order + hooks
 │   └── ...
 ├── Prose/
 │   ├── Chapter_001_Title.md

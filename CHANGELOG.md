@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.6.17
+
+> 用户反馈专项：长篇细纲升级为章节蓝图（#162）· 语气标点谱系（#161）· story-setup v13 部署刷新 · 汇入 v0.6.16 之后的深度限知、正文元信息、拆文模块链、review 一致性、段落/主语节奏等修复
+
+### 新增 / 改进
+
+- **长篇细纲升级为章节蓝图（#162）**：`story-long-write` 的 `大纲/细纲_第XXX章.md` 保留旧字段（核心事件、目标情绪、章首/章尾钩子、爽点、字数目标），新增内容概括（起因/发展/转折/高潮/结尾）、情节安排（主线/辅线/事件线/感情线/逻辑线）、人物关系和出场顺序、情节细化、结尾设定和钩子。
+- **日更与导入消费新版蓝图**：日更准备层会显式读取内容概括、多线安排、人物出场、代价/收益与章尾承接；旧版细纲缺新版字段不阻塞，补建/回填未知项统一写 `[待补充]`；`story-import` 只从证据反推新版字段，不编造副线或关系。
+- **短篇小节大纲轻量增强**：`小节大纲.md` 增加结构段/五段功能、人物/关系变化、因果/逻辑链、结尾承接/钩子等字段，但不套长篇完整章节蓝图，避免短篇流程变重。
+- **语气标点谱系（#161）**：writer references、`narrative-writer`、`story-review`、`story-deslop` 增加“标点服务语气/人物声线”的规则：质问用问号，爆发峰值少量感叹，犹豫/未尽用 `……` 或动作停顿，对话打断/拖长 `——` 保留；同时明确禁止通篇句号化和随机标点堆砌。
+- **story-setup v13**：`setup_skill_version` 升级到 `1.2.2`、`.story-deployed` 的 `agents_version` 升级到 `13`；`story-architect` 产出新版章节蓝图，`consistency-checker` 消费逻辑线/人物关系变化/出场顺序/代价兑现，session-start 对 v12 及以下提示重新部署。
+- **v0.6.16 后已合入改进汇总**：包含写正文前细纲守卫与 subagent solo 降级修复（#148）、深度限知视角/去解释腔/情绪烈度（#147/#152）、正文中禁止章节元信息（#155）、副对标书数量放宽（#157）、story-review 推理型一致性检查（#158）、拆文→可复用写作模块链（#149/#156）、清理过期市场指导（#160）、段落/主语节奏自然化（#159）。
+
+### 发布准备
+
+- `CHANGELOG.md` 新增 v0.6.17 条目；`.claude-plugin/marketplace.json` metadata.version 0.6.16 → 0.6.17。
+- 由于 story-setup templates/rules/references 更新，已部署项目需重新运行 `/story-setup`，并在部署后新开 Claude Code 会话。
+- 根目录 `.claude/` 仍视为 ignored 本地部署镜像，不作为发布源；canonical source 位于 `skills/**`、`scripts/**`、`CHANGELOG.md` 和 `.claude-plugin/marketplace.json`。
+
 ## v0.6.16
 
 > 扫榜全平台健壮性实测修复：番茄书名全回退 `bookId:xxx` 修复 + 题材/标签扩采 · 点众/七猫/刺猬猫书名与作品页链接修复 · 黑岩错误态细分 · 晋江补详情页核心指标采集 · 全平台连通性自检/质量信号 · 拆解管道合法性语境 · 写作流程破折号过滤 · prompt-cache 优化
