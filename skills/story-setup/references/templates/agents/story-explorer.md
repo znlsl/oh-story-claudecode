@@ -152,15 +152,23 @@ maxTurns: 15
    - 若字段缺失 → `Glob 对标/*/` 取字典序第一个目录，并在 `gaps.main_benchmark_unspecified: true` 提示主对标书未指定
    - 若 `对标/` 无子目录，继续向上找工作区根下的 `拆文库/*/`；若仍无可用目录 → 返回 `gaps.no_benchmark: true`，`results` 置空，**不报错、不继续读文风**
 3. **对标书路径查找**：优先 `{项目}/对标/{书名}/`，回退 `拆文库/{书名}/`（向上找到工作区根，再下钻拆文库）
-4. **读情绪模块（权威）**：
+4. **判定对标契约版本（先于回退）**：
+   - 优先 `Read {对标书路径}/剧情/README.md`；若存在 v12 产物说明、`节奏.md`、`情绪模块.md`、关键信息推进、情绪触动点、可复现模块等任一信号 → `gaps.contract_version: "v12"`。
+   - 再 `Read {对标书路径}/拆文报告.md`；若包含「读者需求 / 情绪引擎」「关键信息与扩写技法总览」「节奏与情绪触动点」「可复现模块」任一 v12 标题，或导入/生成记录写明 Stage 3+ 已完成 → `gaps.contract_version: "v12"`。
+   - 若只有旧式 `拆文报告.md` / `文风.md` / `剧情/故事线.md`，且没有上述 v12 信号 → `gaps.contract_version: "legacy"` 与 `gaps.legacy_deconstruction: true`。
+   - 若信号不足但发现 `剧情/节奏.md` 或 `剧情/情绪模块.md` 任一权威文件存在，也按 `v12` 处理；宁可停下修复，不把半套 v12 当 legacy。
+5. **读情绪模块（权威）**：
    - 优先 `Read {对标书路径}/剧情/情绪模块.md`
    - 存在 → 从「读者需求 / 情绪引擎」「可复现模块」或模块卡片中，按本章情绪/爽点类型选择 1 条 `selected_emotion_module`，并写入 `module_source_path`
-   - 不存在 → `gaps.module_missing: true`；不要失败，后续从 `拆文报告.md`、`文风.md` 可借鉴技巧、匹配章摘要回退抽取模块线索
-5. **读节奏索引（权威）**：
+   - 不存在且 `gaps.contract_version == "v12"` → 返回 `gaps.missing_primary_contract: true`、`gaps.module_missing: true`、`gaps.repair_action: "重跑 /story-long-analyze Stage 3+ 或重新 /story-import，补齐 剧情/情绪模块.md"`；不要从旧摘要/文风回退补足
+   - 不存在且 `gaps.legacy_deconstruction: true` → `gaps.module_missing: true`；允许后续从 `拆文报告.md`、`文风.md` 可借鉴技巧、匹配章摘要回退抽取模块线索
+6. **读节奏索引（权威）**：
    - 优先 `Read {对标书路径}/剧情/节奏.md`
    - 存在 → 从关键信息推进表、情绪触动点、爆发节奏/冷却段中选择 1 条 `rhythm_reference`，并写入 `rhythm_source_path`
-   - 不存在 → `gaps.rhythm_missing: true`；不要失败，后续从 `拆文报告.md` 节奏摘要、匹配章摘要、`剧情/故事线.md` 回退抽取节奏线索
-   - 若 `情绪模块.md` 与 `节奏.md` 对同一章节/模块的读者情绪或爆发点描述互相矛盾，保留两条原文摘要，并返回 `gaps.module_rhythm_conflict: true` 与 `gaps.conflict: "..."`；调用方按两个权威文件优先于 `拆文报告.md` / `故事线.md` 的规则处理，禁止自行改写
+   - 不存在且 `gaps.contract_version == "v12"` → 返回 `gaps.missing_primary_contract: true`、`gaps.rhythm_missing: true`、`gaps.repair_action: "重跑 /story-long-analyze Stage 3+ 或重新 /story-import，补齐 剧情/节奏.md"`；不要从旧摘要/故事线回退补足
+   - 不存在且 `gaps.legacy_deconstruction: true` → `gaps.rhythm_missing: true`；允许后续从 `拆文报告.md` 节奏摘要、匹配章摘要、`剧情/故事线.md` 回退抽取节奏线索
+   - 若任一 v12 权威文件缺失（`gaps.missing_primary_contract: true`），保留已读到的来源信息后直接返回结构化 JSON；调用方必须停止本章准备，不进入文风/章节匹配/正文写作。
+   - 若两个权威文件都存在但对同一章节/模块的读者情绪或爆发点描述互相矛盾，保留两条原文摘要，并返回 `gaps.module_rhythm_conflict: true` 与 `gaps.conflict: "..."`；调用方按两个权威文件优先于 `拆文报告.md` / `故事线.md` 的规则处理，禁止自行改写
 7. **读文风**：
    - `Read {对标书路径}/文风.md`
    - 不存在 → 返回 `gaps.profile_missing: true, expected_path: "..."`，**不继续后续步骤**
@@ -209,7 +217,7 @@ maxTurns: 15
 6. `Read 正文/第{N-1}章_*.md` -> 最新一章（衔接用）
 7. 汇总为"写作上下文包"
 
-> 任何文件缺失时，在 `gaps` 中包含该事实并继续处理，返回仍能组装的部分上下文，不要完全失败。
+> 任何文件缺失时，在 `gaps` 中包含该事实并继续处理，返回仍能组装的部分上下文，不要完全失败；但 `benchmark_style_load` 已判定 `gaps.contract_version == "v12"` 且缺 `剧情/情绪模块.md` 或 `剧情/节奏.md` 时例外：必须返回 `missing_primary_contract: true` 与 `repair_action`，不得继续回退。
 
 ---
 
@@ -310,6 +318,7 @@ maxTurns: 15
     "rhythm_missing": false,
     "module_rhythm_conflict": false,
     "conflict": null,
+    "contract_version": "v12|legacy",
     "legacy_deconstruction": false,
     "missing_primary_contract": false,
     "repair_action": null,
