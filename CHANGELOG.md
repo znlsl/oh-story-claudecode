@@ -15,6 +15,11 @@ All notable changes to this project will be documented in this file.
 - **story-setup v13**：`setup_skill_version` 升级到 `1.2.2`、`.story-deployed` 的 `agents_version` 升级到 `13`；`story-architect` 产出新版章节蓝图，`consistency-checker` 消费逻辑线/人物关系变化/出场顺序/代价兑现，session-start 对 v12 及以下提示重新部署。
 - **v0.6.16 后已合入改进汇总**：包含写正文前细纲守卫与 subagent solo 降级修复（#148）、深度限知视角/去解释腔/情绪烈度（#147/#152）、正文中禁止章节元信息（#155）、副对标书数量放宽（#157）、story-review 推理型一致性检查（#158）、拆文→可复用写作模块链（#149/#156）、清理过期市场指导（#160）、段落/主语节奏自然化（#159）。
 
+### 修复
+
+- **skill 指令一致性（左右互搏收敛）**：统一 `story-long-write` 日更读取列表与 `workflow-daily.md` 中 `剧情/情绪模块.md` / `剧情/节奏.md` 的缺失措辞——明确 v12 新契约缺失停下修复、仅 legacy 回退，消除与权威「缺失文件回退」规则的冲突；`story` 路由的「查故事资料 / 查资料」改为先做轻量 agent 可用性检查，不可用时降级直接 Read/Grep 并标注 `Fallback: agent unavailable -> direct lookup`，不再无条件直接 spawn。
+- **标点规范化器边界修复**：`normalize-punctuation.js` 对紧跟开引号 / 开括号（`「『（(“‘`）的 `……` / `——` 删空处理，修复 `「……你回来了。」` 被误改成 `「，你回来了。」`、`「……」` 被改成 `「。」` 的问题；句末拖长、数字区间、冒号落点等既有行为不变（4 份副本保持字节一致）。
+
 ### 发布准备
 
 - `CHANGELOG.md` 新增 v0.6.17 条目；`.claude-plugin/marketplace.json` metadata.version 0.6.16 → 0.6.17。

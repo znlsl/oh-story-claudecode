@@ -206,6 +206,8 @@ function choosePauseReplacement(text, start, length) {
 
   // 正文产物不保留 `……`、`——`、`—` 或 `--`；对话打断和数字区间不设例外。
   if (before === '') return '';
+  // 紧跟开引号/开括号的停顿符号属于句首边界，删空即可，避免产出 `「，…」` 或 `「。」`。
+  if (isOpeningDelimiter(before)) return '';
   if (/\d/.test(before) && /\d/.test(after)) return '到';
   if (isClosingQuote(after)) return isSentencePunctuation(before) ? '' : '。';
 
@@ -240,6 +242,10 @@ function isPunctuation(ch) {
 
 function isClosingQuote(ch) {
   return /["”」』]/.test(ch || '');
+}
+
+function isOpeningDelimiter(ch) {
+  return /[「『（(“‘]/.test(ch || '');
 }
 
 function normalizeQuotes(line, quoteMode, quoteOpen, lineNo) {
