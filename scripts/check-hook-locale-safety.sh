@@ -21,8 +21,10 @@ echo "========================"
 
 fail=0
 
-# Check 1：在中文内容/路径上做 awk/sed/grep 文本匹配或 bash 中文通配的 hook，必须 export
+# Check 1：自身在中文内容/路径上做 awk/sed/grep 文本匹配或 bash 中文通配的 hook，必须 export
 # LC_ALL=C。这些 hook 在 GBK 区域下会按多字节错解 UTF-8。新增同类 hook 时一并加入清单。
+# 注：session-*/pre-compact/post-compact 自身只做精确 [ -f/-d ]/find -name/printf（GBK 安全），
+# 中文匹配全委托给 lib/common.sh，故不在此清单，改由 Check 3 守 common.sh。
 LOCALE_SENSITIVE_HOOKS="detect-story-gaps guard-outline-before-prose validate-story-commit"
 for h in $LOCALE_SENSITIVE_HOOKS; do
   f="$HOOKS_DIR/$h.sh"
@@ -49,6 +51,23 @@ if [ -n "$BRACKET_HITS" ]; then
   fail=1
 else
   echo "OK: 未发现含全角字符的方括号字符组"
+fi
+
+# Check 3：lib/common.sh 被多个未 export LC_ALL=C 的 hook（session-*/pre-compact/post-compact）
+# 复用，其处理中文书名/路径的 sed/grep 必须 per-command 加 LC_ALL=C，否则 GBK 下 trim 会报
+# illegal byte sequence、.active-book 被吞空、误解析到 find 的第一本书。
+COMMON="$HOOKS_DIR/lib/common.sh"
+if [ -f "$COMMON" ]; then
+  # 单文件 grep -n 输出是 LINENO:content（无文件名前缀），注释行用 ^[0-9]+:[[:space:]]*# 剔除。
+  BARE_TEXT_TOOL="$(grep -nE '(^|[^=[:alnum:]_])(sed|grep)[[:space:]]' "$COMMON" 2>/dev/null \
+    | grep -vE 'LC_ALL=C' | grep -vE '^[0-9]+:[[:space:]]*#' || true)"
+  if [ -n "$BARE_TEXT_TOOL" ]; then
+    echo "FAIL: lib/common.sh 有未加 LC_ALL=C 的 sed/grep（GBK 下处理中文书名会乱）："
+    echo "$BARE_TEXT_TOOL"
+    fail=1
+  else
+    echo "OK: lib/common.sh 的 sed/grep 均已 LC_ALL=C"
+  fi
 fi
 
 exit "$fail"

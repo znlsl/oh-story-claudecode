@@ -121,6 +121,16 @@ EOF
   git -C "$P2" add -A >/dev/null 2>&1
   cout="$(cd "$P2" && GBK CLAUDE_PROJECT_DIR="$P2" STORY_COMMIT_COMMAND='git commit -m x' bash .claude/hooks/validate-story-commit.sh 2>&1 || true)"
   echo "$cout" | grep -q 'Hardcoded character attributes' && pass "[GBK] validate-commit catches fullwidth-colon attr" || bad "[GBK] validate-commit missed fullwidth-colon attr under GBK"
+
+  # 2d lib/common.sh discover_active_book：.active-book 指向「短中文书名」时，GBK 下 trim sed
+  # 会报 illegal byte sequence → active 被吞空 → 误回退到 find 的第一本书。覆盖被 session-*/
+  # pre-compact/post-compact 复用的这条共享路径。确定性构造：活跃书无 追踪/正文（fallback 找
+  # 不到它），诱饵书有 追踪/（fallback 只会命中诱饵）—— 修复前回 decoy、修复后回 .active-book。
+  P2D="$WORK/p2d"; deploy "$P2D"
+  mkdir -p "$P2D/让你管账号/设定" "$P2D/decoy小说/追踪"
+  printf '让你管账号\n' > "$P2D/.active-book"
+  active_book="$(cd "$P2D" && GBK CLAUDE_PROJECT_DIR="$P2D" bash -c 'source ".claude/hooks/lib/common.sh"; basename "$(discover_active_book)"' 2>/dev/null)"
+  [ "$active_book" = "让你管账号" ] && pass "[GBK] discover_active_book honors short Chinese .active-book" || bad "[GBK] discover_active_book dropped short Chinese .active-book -> [$active_book] (expected 让你管账号)"
 fi
 
 echo ""
