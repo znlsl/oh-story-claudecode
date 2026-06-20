@@ -53,7 +53,9 @@ for BOOK_DIR in "${BOOK_DIRS[@]}"; do
     # 避免长篇项目每次 SessionStart 都触发全量伏笔审计。
     # 行为回归脚本：scripts/check-hook-regex-sync.sh（区域设置健壮性由 export LC_ALL=C 保证）
     ABNORMAL_FORESHADOW=$(awk -F'|' '
-      function trim(s) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", s); return s }
+      # 含全角空格 U+3000：LC_ALL=C 下 [[:space:]] 只认 ASCII 空白，单元格用全角空格补白时
+      # 会留在 status 里被误判为异常；用交替补上全角空格（不能进字符组，否则触发跨区域 bug）。
+      function trim(s) { gsub(/^([[:space:]]|　)+|([[:space:]]|　)+$/, "", s); return s }
       /^\|/ && $0 !~ /^\|[-[:space:]|]+$/ {
         status=trim($6)
         if (status == "" || status == "状态" || status ~ /^状态\{/) next

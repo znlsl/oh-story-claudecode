@@ -99,11 +99,12 @@ else
   [ "$(rg '让你管账号/正文/第1章_开端.md')" = 0 ] && pass "[GBK] guard allows present 细纲 (Chinese glob)" || bad "[GBK] guard should allow present 细纲 under GBK"
   [ "$(rg '让你管账号/正文/第001章_开端.md')" = 0 ] && pass "[GBK] guard tolerates zero-pad 第001章" || bad "[GBK] guard should tolerate 第001章 under GBK"
 
-  # 2b detect-story-gaps：正常伏笔表不误报；同时证明中文书目能被发现
+  # 2b detect-story-gaps：正常伏笔表不误报；同时证明中文书目能被发现。
+  # F001 状态用全角空格 U+3000 补白（已埋 前后各一个），守住 LC_ALL=C 下 trim 仍认全角空格。
   cat > "$BOOK/追踪/伏笔.md" <<'EOF'
 | ID | 伏笔内容 | 埋设章节 | 预计回收章节 | 状态{未埋/已埋/已回收/已过期} | 重要度{高/中/低} |
 |----|---------|---------|-------------|-----------------------------|----------------|
-| F001 | 玉佩身世 | 第1章 | 第20章 | 已埋 | 高 |
+| F001 | 玉佩身世 | 第1章 | 第20章 |　已埋　| 高 |
 | F002 | 师门往事 | 第3章 | 第25章 | 已回收 | 中 |
 EOF
   out="$(cd "$P2" && GBK CLAUDE_PROJECT_DIR="$P2" bash .claude/hooks/detect-story-gaps.sh 2>&1 || true)"
@@ -114,8 +115,9 @@ EOF
   echo "$out2" | grep -q '让你管账号' && pass "[GBK] detect-story-gaps discovers Chinese book + warns on real gap" || bad "[GBK] detect-story-gaps failed to discover Chinese book under GBK"
   rm -f "$BOOK"/正文/第*章.md
 
-  # 2c validate-story-commit：命中全角冒号硬编码属性（C/GBK 区域下方括号字符组会漏，交替修好）
-  printf '年龄 ：18\n' > "$BOOK/正文/第1章_开端.md"
+  # 2c validate-story-commit：命中全角冒号 + 全角空格的硬编码属性（C/GBK 区域下方括号字符组
+  # 会漏全角冒号、[[:space:]] 会漏全角空格，交替修好）
+  printf '年龄　：18\n' > "$BOOK/正文/第1章_开端.md"
   git -C "$P2" add -A >/dev/null 2>&1
   cout="$(cd "$P2" && GBK CLAUDE_PROJECT_DIR="$P2" STORY_COMMIT_COMMAND='git commit -m x' bash .claude/hooks/validate-story-commit.sh 2>&1 || true)"
   echo "$cout" | grep -q 'Hardcoded character attributes' && pass "[GBK] validate-commit catches fullwidth-colon attr" || bad "[GBK] validate-commit missed fullwidth-colon attr under GBK"
