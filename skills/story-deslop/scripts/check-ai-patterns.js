@@ -222,6 +222,7 @@ function findNotIsComparisons(text, getPosition) {
 function findPositiveFlipEnd(candidate) {
   let index = 2; // after “不是”
   let scanned = 0;
+  let crossedSeparator = false;
 
   while (index < candidate.length && scanned <= MAX_NEGATIVE_SPAN) {
     const char = candidate[index];
@@ -232,19 +233,32 @@ function findPositiveFlipEnd(candidate) {
       const next = skipGap(candidate, index + 1);
       if (startsWithAt(candidate, next, '而是')) return next + 2;
       if (candidate[next] === '是') return next + 1;
+      crossedSeparator = true;
     }
 
     if (HARD_SEPARATORS.has(char)) {
       const next = skipGap(candidate, index + 1);
       if (candidate[next] === '是') return next + 1;
       if (char !== '.') break;
+      crossedSeparator = true;
     }
 
     if (STOP_CHARS.has(char)) break;
 
-    // Catch compact forms such as “不是A是B”, but do not treat the “是” inside
-    // a second negative fragment (“不是A，也不是B”) as the positive flip.
-    if (char === '是' && candidate[index - 1] !== '不') return index + 1;
+    // Catch compact forms such as “不是A是B”, but only within the first clause —
+    // before any separator. After a separator the trailing “是” of a conjunction
+    // (只是/可是/但是/还是/于是/倒是/总是…) is part of that word, not a positive
+    // copula (issue #166 false-positive class). Post-separator flips are still
+    // caught when separator-adjacent (“，是”/“，而是”) by the separator branches
+    // above; subject-present flips like “，他是”/“，那是” are intentionally NOT
+    // caught here — there is no separator-local way to tell them from a
+    // conjunction without a word list, and on a hard rescan-to-0 gate a false
+    // positive (forcing a rewrite of good prose) costs more than missing this
+    // rarer form. Also never treat the “是” inside a second negative fragment
+    // (“不是A，也不是B”) as the flip.
+    if (char === '是' && candidate[index - 1] !== '不' && !crossedSeparator) {
+      return index + 1;
+    }
 
     index += 1;
     scanned += 1;

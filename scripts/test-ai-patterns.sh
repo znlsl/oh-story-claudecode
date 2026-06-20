@@ -27,9 +27,14 @@ title: 不是A，而是B
 他不是冷漠，而是绝望。
 她不是害怕，是累了。
 他不是笨是太急。
+他不是冷漠；是绝望。
 它不是普通的粥！
 是药。
 她不是不想走，也不是不敢走。
+他不是讨厌你，只是累了。
+他不是走了，可是没人知道。
+他不是不愿意，于是答应了。
+她不是生气，倒是有点担心。
 ```
 他不是冷漠，而是绝望。
 ```
@@ -53,11 +58,24 @@ node - "$OUT" <<'NODE'
 const fs = require('fs');
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const excerpts = report.findings.map((finding) => finding.excerpt);
+
+// Genuine flips that MUST be detected: 而是 / “，是” / compact / “；是” / hard-stop + 是.
 const expected = [
   '不是冷漠，而是绝望',
   '不是害怕，是累了',
   '不是笨是太急',
+  '不是冷漠；是绝望',
   '不是普通的粥！ 是药',
+];
+
+// Natural prose that MUST NOT be flagged: the trailing 是 of a conjunction
+// (只是/可是/于是/倒是…) after a separator is not a positive copula (issue #166
+// false-positive class). “是不是”/“也不是” second-negation must also stay silent.
+const forbidden = [
+  '只是累了',
+  '可是没人知道',
+  '于是答应了',
+  '倒是有点担心',
 ];
 
 if (report.findings.length !== expected.length) {
@@ -67,6 +85,12 @@ if (report.findings.length !== expected.length) {
 for (const excerpt of expected) {
   if (!excerpts.includes(excerpt)) {
     throw new Error(`missing expected excerpt: ${excerpt}; got ${JSON.stringify(excerpts)}`);
+  }
+}
+
+for (const marker of forbidden) {
+  if (excerpts.some((excerpt) => excerpt.includes(marker))) {
+    throw new Error(`false positive: conjunction "${marker}" was flagged; got ${JSON.stringify(excerpts)}`);
   }
 }
 NODE
