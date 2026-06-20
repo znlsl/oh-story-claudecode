@@ -68,9 +68,20 @@ done
 
 # ===== Part 2：真实 GBK 区域下跑全部 hook =====
 echo "--- Part 2: real GBK locale (LANG/LC_ALL=zh_CN.GBK) end-to-end ---"
-GBK_LOCALE="$(locale -a 2>/dev/null | grep -iE '^zh_CN\.(gbk|gb18030|gb2312)$' | head -1 || true)"
+# 探测「可用」的 GBK 类 locale：不看 `locale -a` 列表（Cygwin/MSYS2 会按需合成而不列出），
+# 而是真试着设上去看 `locale charmap` 是否返回 GB 类编码。这样 Linux(localedef 生成)、
+# macOS(自带)、Windows Git Bash(Cygwin 合成) 三处都能跑到真实 GBK。
+detect_gbk_locale() {
+  local cand cm
+  for cand in zh_CN.GBK zh_CN.gbk zh_CN.GB18030 zh_CN.gb18030 zh_CN.GB2312 zh_CN.gb2312; do
+    cm="$(LC_ALL="$cand" locale charmap 2>/dev/null | tr 'a-z' 'A-Z' | tr -d '-')"
+    case "$cm" in GBK|GB18030|GB2312) printf '%s' "$cand"; return 0 ;; esac
+  done
+  return 1
+}
+GBK_LOCALE="$(detect_gbk_locale || true)"
 if [ -z "$GBK_LOCALE" ]; then
-  echo "  SKIP: 系统未安装 zh_CN.GBK 类 locale（Part 1 已覆盖 python 那层；Part 2 需真实 GBK 区域）"
+  echo "  SKIP: 系统无可用 zh_CN.GBK 类 locale（Part 1 已覆盖 python 那层；Part 2 需真实 GBK 区域）"
 else
   echo "  using locale: $GBK_LOCALE"
   GBK() { LANG="$GBK_LOCALE" LC_ALL="$GBK_LOCALE" env "$@"; }
