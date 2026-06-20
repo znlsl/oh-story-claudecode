@@ -1,0 +1,119 @@
+#!/bin/bash
+# test-hook-encoding-portable.sh — 部署型 hook 在 Windows 中文系统下的编码健壮性回归。
+#
+# Windows 中文环境有两层独立的编码坑（都让 hook 静默失效，见 issue #164）：
+#   1) python stdout 默认 cp936（与区域设置无关）：print(中文) 编成 GBK，和脚本 UTF-8
+#      字面量字节不符 → 比较恒假。修法：sys.stdout.buffer.write(...encode("utf-8"))。
+#   2) 用户导出 GBK 区域设置（LANG=zh_CN.GBK）时，gawk/GNU sed/GNU grep/bash 通配
+#      按 GBK 多字节解码 UTF-8 内容/路径会乱。修法：hook 内 export LC_ALL=C 走字节匹配。
+#
+# 本测试两段都跑：
+#   Part 1：用 PYTHONIOENCODING=gbk 强制 python stdout 走 cp936，复现坑 1（任何平台可跑）。
+#   Part 2：在真实 GBK 区域下跑全部 hook，复现坑 2（需系统装有 zh_CN.GBK 类 locale；
+#           macOS 自带，CI ubuntu 由 workflow localedef 生成，Windows Git Bash 若无则跳过）。
+#
+# 用法：bash scripts/test-hook-encoding-portable.sh
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$REPO_ROOT" ]; then
+  echo "Error: not in a git repository"
+  exit 1
+fi
+HOOKS_DIR="$REPO_ROOT/skills/story-setup/references/templates/hooks"
+
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+# 探测可用解释器（Windows 上 python3 可能是 Store 占位程序 exit 49）
+for PYBIN in python3 python py; do "$PYBIN" -c "" 2>/dev/null && break; done
+
+fail=0
+pass() { echo "  PASS $1"; }
+bad()  { echo "  FAIL $1"; fail=1; }
+
+deploy() { # $1 = project root
+  mkdir -p "$1/.claude"
+  cp -R "$HOOKS_DIR" "$1/.claude/hooks"
+  chmod +x "$1/.claude/hooks"/*.sh "$1/.claude/hooks/lib"/*.sh 2>/dev/null || true
+}
+
+echo "Hook encoding portability test (issue #164)"
+echo "==========================================="
+echo "interpreter: $PYBIN"
+
+# ===== Part 1：python stdout cp936（PYTHONIOENCODING=gbk）=====
+echo "--- Part 1: python stdout cp936 simulation (PYTHONIOENCODING=gbk) ---"
+P1="$WORK/p1"; deploy "$P1"
+mkdir -p "$P1/book/正文" "$P1/book/大纲" "$P1/short"
+run_guard_py() { # $1 mode(default|gbk)  $2 file_path -> exit code
+  local mode="$1" fp="$2" ec=0
+  local -a pyenv=()
+  [ "$mode" = "gbk" ] && pyenv=(env PYTHONIOENCODING=gbk)
+  printf '{"tool_name":"Write","tool_input":{"file_path":"%s","content":"x"}}' "$fp" \
+    | CLAUDE_PROJECT_DIR="$P1" ${pyenv[@]+"${pyenv[@]}"} bash "$P1/.claude/hooks/guard-outline-before-prose.sh" \
+      >/dev/null 2>&1 || ec=$?
+  printf '%s' "$ec"
+}
+for MODE in default gbk; do
+  rm -f "$P1/book/大纲/细纲_第1章.md"
+  [ "$(run_guard_py "$MODE" 'book/正文/第1章_开端.md')" = 2 ] && pass "[$MODE] long blocked, 细纲 missing" || bad "[$MODE] long should block when 细纲 missing"
+  : > "$P1/book/大纲/细纲_第1章.md"
+  [ "$(run_guard_py "$MODE" 'book/正文/第1章_开端.md')" = 0 ] && pass "[$MODE] long allowed, 细纲 present" || bad "[$MODE] long should allow when 细纲 present"
+  : > "$P1/short/设定.md"; rm -f "$P1/short/小节大纲.md"
+  [ "$(run_guard_py "$MODE" 'short/正文.md')" = 2 ] && pass "[$MODE] short blocked, 小节大纲 missing" || bad "[$MODE] short should block when 小节大纲 missing"
+  : > "$P1/short/小节大纲.md"
+  [ "$(run_guard_py "$MODE" 'short/正文.md')" = 0 ] && pass "[$MODE] short allowed, 小节大纲 present" || bad "[$MODE] short should allow when 小节大纲 present"
+done
+
+# ===== Part 2：真实 GBK 区域下跑全部 hook =====
+echo "--- Part 2: real GBK locale (LANG/LC_ALL=zh_CN.GBK) end-to-end ---"
+GBK_LOCALE="$(locale -a 2>/dev/null | grep -iE '^zh_CN\.(gbk|gb18030|gb2312)$' | head -1 || true)"
+if [ -z "$GBK_LOCALE" ]; then
+  echo "  SKIP: 系统未安装 zh_CN.GBK 类 locale（Part 1 已覆盖 python 那层；Part 2 需真实 GBK 区域）"
+else
+  echo "  using locale: $GBK_LOCALE"
+  GBK() { LANG="$GBK_LOCALE" LC_ALL="$GBK_LOCALE" env "$@"; }
+  P2="$WORK/p2"; deploy "$P2"
+  git -C "$P2" init -q; git -C "$P2" config user.email t@t.t; git -C "$P2" config user.name t
+  # 中文书名作为中间目录——正是 GBK 下 bash 通配会 NOMATCH 的场景
+  BOOK="$P2/让你管账号"; mkdir -p "$BOOK/正文" "$BOOK/大纲" "$BOOK/追踪" "$BOOK/设定"
+  printf '让你管账号\n' > "$P2/.active-book"
+
+  # 2a guard-outline：中文书名中间目录 + 中文通配 glob
+  rg() { local ec=0; printf '{"tool_name":"Write","tool_input":{"file_path":"%s","content":"x"}}' "$1" \
+    | GBK CLAUDE_PROJECT_DIR="$P2" bash "$P2/.claude/hooks/guard-outline-before-prose.sh" >/dev/null 2>&1 || ec=$?; printf '%s' "$ec"; }
+  [ "$(rg '让你管账号/正文/第1章_开端.md')" = 2 ] && pass "[GBK] guard blocks missing 细纲" || bad "[GBK] guard should block missing 细纲"
+  : > "$BOOK/大纲/细纲_第1章.md"
+  [ "$(rg '让你管账号/正文/第1章_开端.md')" = 0 ] && pass "[GBK] guard allows present 细纲 (Chinese glob)" || bad "[GBK] guard should allow present 细纲 under GBK"
+  [ "$(rg '让你管账号/正文/第001章_开端.md')" = 0 ] && pass "[GBK] guard tolerates zero-pad 第001章" || bad "[GBK] guard should tolerate 第001章 under GBK"
+
+  # 2b detect-story-gaps：正常伏笔表不误报；同时证明中文书目能被发现
+  cat > "$BOOK/追踪/伏笔.md" <<'EOF'
+| ID | 伏笔内容 | 埋设章节 | 预计回收章节 | 状态{未埋/已埋/已回收/已过期} | 重要度{高/中/低} |
+|----|---------|---------|-------------|-----------------------------|----------------|
+| F001 | 玉佩身世 | 第1章 | 第20章 | 已埋 | 高 |
+| F002 | 师门往事 | 第3章 | 第25章 | 已回收 | 中 |
+EOF
+  out="$(cd "$P2" && GBK CLAUDE_PROJECT_DIR="$P2" bash .claude/hooks/detect-story-gaps.sh 2>&1 || true)"
+  echo "$out" | grep -q '伏笔' && bad "[GBK] detect-story-gaps spuriously warns on normal 伏笔" || pass "[GBK] detect-story-gaps silent on normal 伏笔"
+  # 制造真实缺口（正文>10 设定<3），证明中文书目确实被遍历到（否则上面的"静默"是假阳性）
+  i=1; while [ "$i" -le 11 ]; do : > "$BOOK/正文/第${i}章.md"; i=$((i+1)); done
+  out2="$(cd "$P2" && GBK CLAUDE_PROJECT_DIR="$P2" bash .claude/hooks/detect-story-gaps.sh 2>&1 || true)"
+  echo "$out2" | grep -q '让你管账号' && pass "[GBK] detect-story-gaps discovers Chinese book + warns on real gap" || bad "[GBK] detect-story-gaps failed to discover Chinese book under GBK"
+  rm -f "$BOOK"/正文/第*章.md
+
+  # 2c validate-story-commit：命中全角冒号硬编码属性（C/GBK 区域下方括号字符组会漏，交替修好）
+  printf '年龄 ：18\n' > "$BOOK/正文/第1章_开端.md"
+  git -C "$P2" add -A >/dev/null 2>&1
+  cout="$(cd "$P2" && GBK CLAUDE_PROJECT_DIR="$P2" STORY_COMMIT_COMMAND='git commit -m x' bash .claude/hooks/validate-story-commit.sh 2>&1 || true)"
+  echo "$cout" | grep -q 'Hardcoded character attributes' && pass "[GBK] validate-commit catches fullwidth-colon attr" || bad "[GBK] validate-commit missed fullwidth-colon attr under GBK"
+fi
+
+echo ""
+if [ "$fail" -eq 0 ]; then
+  echo "PASS: hook 在 cp936 与真实 GBK 区域下都正确"
+else
+  echo "FAIL: hook 在某个编码/区域模式下行为不符（中文编码回归）"
+fi
+exit "$fail"

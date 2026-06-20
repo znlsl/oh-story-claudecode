@@ -1,0 +1,54 @@
+#!/bin/bash
+# check-hook-locale-safety.sh — 守卫部署 hook 在 Windows 中文 GBK 区域下的字节安全。
+#
+# 背景（issue #164 同类）：部署 hook 跑在用户 Windows Git Bash。若用户导出 GBK/GB2312
+# 区域设置，gawk/GNU sed/GNU grep 和 bash 通配会把 UTF-8 中文内容/路径按多字节错误解码，
+# 让守卫静默失效（误拦或漏检）。治法是在 hook 里 `export LC_ALL=C` 走字节匹配。
+#
+# 本守卫是 locale 无关的静态检查（任何 CI 环境都能跑），与行为级回归
+# scripts/test-hook-encoding-portable.sh（在真实 GBK 区域下端到端跑 hook）互补。
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$REPO_ROOT" ]; then
+  echo "Error: not in a git repository"
+  exit 1
+fi
+HOOKS_DIR="$REPO_ROOT/skills/story-setup/references/templates/hooks"
+
+echo "Hook locale-safety Guard"
+echo "========================"
+
+fail=0
+
+# Check 1：在中文内容/路径上做 awk/sed/grep 文本匹配或 bash 中文通配的 hook，必须 export
+# LC_ALL=C。这些 hook 在 GBK 区域下会按多字节错解 UTF-8。新增同类 hook 时一并加入清单。
+LOCALE_SENSITIVE_HOOKS="detect-story-gaps guard-outline-before-prose validate-story-commit"
+for h in $LOCALE_SENSITIVE_HOOKS; do
+  f="$HOOKS_DIR/$h.sh"
+  if [ ! -f "$f" ]; then
+    echo "FAIL: 预期的 locale 敏感 hook 不存在：$h.sh"
+    fail=1
+    continue
+  fi
+  if ! grep -qE '^[[:space:]]*export[[:space:]]+LC_(ALL|CTYPE)=C\b' "$f"; then
+    echo "FAIL: $h.sh 缺少 export LC_ALL=C（GBK 区域下中文匹配会乱，issue #164 同类）"
+    fail=1
+  fi
+done
+[ "$fail" -eq 0 ] && echo "OK: locale 敏感 hook 均已 export LC_ALL=C"
+
+# Check 2：禁止在部署 hook 的正则里用含全角字符的方括号字符组（如 [：:]）。含全角字符的
+# 字符组只有 UTF-8 区域才正确，在 C/GBK 区域会被拆成单字节、漏匹配；必须改用交替 (：|:)。
+# 用字节匹配检测 `[` 紧跟全角冒号/分号/逗号/句号等常见全角标点；跳过整行注释。
+BRACKET_HITS="$(LC_ALL=C grep -rnE '\[[^]]*(：|；|，|。|！|？|、)' "$HOOKS_DIR"/*.sh 2>/dev/null \
+  | grep -vE ':[0-9]+:[[:space:]]*#' || true)"
+if [ -n "$BRACKET_HITS" ]; then
+  echo "FAIL: 部署 hook 正则里出现含全角字符的方括号字符组（C/GBK 区域会漏匹配，改用交替 (A|B)）："
+  echo "$BRACKET_HITS"
+  fail=1
+else
+  echo "OK: 未发现含全角字符的方括号字符组"
+fi
+
+exit "$fail"
