@@ -129,8 +129,14 @@ EOF
   P2D="$WORK/p2d"; deploy "$P2D"
   mkdir -p "$P2D/让你管账号/设定" "$P2D/decoy小说/追踪"
   printf '让你管账号\n' > "$P2D/.active-book"
-  active_book="$(cd "$P2D" && GBK CLAUDE_PROJECT_DIR="$P2D" bash -c 'source ".claude/hooks/lib/common.sh"; basename "$(discover_active_book)"' 2>/dev/null)"
-  [ "$active_book" = "让你管账号" ] && pass "[GBK] discover_active_book honors short Chinese .active-book" || bad "[GBK] discover_active_book dropped short Chinese .active-book -> [$active_book] (expected 让你管账号)"
+  active_path="$(cd "$P2D" && GBK CLAUDE_PROJECT_DIR="$P2D" bash -c 'source ".claude/hooks/lib/common.sh"; discover_active_book' 2>/dev/null)"
+  # 字节安全断言：活跃书有 设定/、诱饵书有 追踪/；用 [ -d ] 直接 stat 字节路径，避免 basename
+  # 在个别 runner 的 GBK 下改写多字节而假失败。修复前回诱饵（无 设定/），修复后回活跃书。
+  if [ -d "$active_path/设定" ]; then
+    pass "[GBK] common.sh discover_active_book honors short Chinese .active-book"
+  else
+    bad "[GBK] common.sh discover_active_book dropped short Chinese .active-book (resolved [$active_path])"
+  fi
 fi
 
 echo ""

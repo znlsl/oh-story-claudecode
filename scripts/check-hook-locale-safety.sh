@@ -21,11 +21,10 @@ echo "========================"
 
 fail=0
 
-# Check 1：自身在中文内容/路径上做 awk/sed/grep 文本匹配或 bash 中文通配的 hook，必须 export
-# LC_ALL=C。这些 hook 在 GBK 区域下会按多字节错解 UTF-8。新增同类 hook 时一并加入清单。
-# 注：session-*/pre-compact/post-compact 自身只做精确 [ -f/-d ]/find -name/printf（GBK 安全），
-# 中文匹配全委托给 lib/common.sh，故不在此清单，改由 Check 3 守 common.sh。
-LOCALE_SENSITIVE_HOOKS="detect-story-gaps guard-outline-before-prose validate-story-commit"
+# Check 1：所有处理中文内容/路径的部署 hook 必须 export LC_ALL=C，在 GBK 区域下走字节匹配。
+# 含内嵌 python 的 hook（guard-outline/validate-story-commit）export 位置另有讲究（见各文件注释），
+# 但都必须出现该 export。新增 hook 一并加入清单。
+LOCALE_SENSITIVE_HOOKS="detect-story-gaps guard-outline-before-prose validate-story-commit session-start session-end pre-compact post-compact"
 for h in $LOCALE_SENSITIVE_HOOKS; do
   f="$HOOKS_DIR/$h.sh"
   if [ ! -f "$f" ]; then
